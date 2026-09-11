@@ -1,0 +1,22 @@
+# Local data repository — downloads, polls, CSVs, sketches. Never commit.
+/local/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Dependencies and build output (when the app exists)
+node_modules/
+dist/
+build/
+.next/
+.vite/
+out/
+*.log
+npm-debug.log*

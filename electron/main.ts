@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, Menu, shell } from "electron";
 import { ensureLocalDirs, handleLocalRequest, setLocalRoot } from "../vite/local-http.ts";
 
+const APP_NAME = "Michigan Voting Explorer";
+app.setName(APP_NAME);
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..");
 const DIST_DIR = path.join(REPO_ROOT, "dist");
@@ -201,7 +204,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     backgroundColor: BG,
-    title: "Michigan Voting Explorer",
+    title: APP_NAME,
     show: false,
     webPreferences: {
       sandbox: true,
@@ -213,10 +216,27 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
+function macAppMenu(): Electron.MenuItemConstructorOptions {
+  return {
+    label: APP_NAME,
+    submenu: [
+      { role: "about" },
+      { type: "separator" },
+      { role: "services" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "unhide" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  };
+}
+
 function installMenu(): void {
   const isMac = process.platform === "darwin";
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: "appMenu" as const }] : []),
+    ...(isMac ? [macAppMenu()] : []),
     { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
@@ -260,7 +280,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  app.setName("Michigan Voting Explorer");
+  app.setAboutPanelOptions({ applicationName: APP_NAME });
   setLocalRoot(path.join(REPO_ROOT, "local"));
   ensureLocalDirs();
 

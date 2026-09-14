@@ -51,7 +51,7 @@ The running app should read/write data from `local/` (with a documented default 
 ## How to work
 
 1. Read the PRD before building or changing UX. Do not create or use a scratchpad markdown file.
-2. Prefer a simple local web app (`npm run dev`). Vite + React + MapLibre is a fine default if unspecified.
+2. Prefer the desktop app (`npm start`) for daily use. `npm run dev` still runs the Vite browser app. Vite + React + MapLibre is the UI.
 3. Validate polls (required fields, field dates, duplicate key warning). Append to a changelog when creating/editing polls.
-4. Keep README accurate for how to run the app, add a poll, and refresh county files from `local/`.
+4. Keep README accurate for how to run the app (desktop `npm start` or Vite `npm run dev`), add a poll, and refresh county files from `local/`.
 5. Match existing style. Do not add extra markdown files unless asked.

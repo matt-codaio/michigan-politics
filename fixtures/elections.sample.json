@@ -1,0 +1,30 @@
+{
+  "_comment": "Empty election shape for tests. Not official returns. Track C writes local/counties/elections.json. Years are even federal cycles 2000–2024.",
+  "generatedAt": "2000-01-01T00:00:00Z",
+  "geos": {
+    "26": {
+      "geoId": "26",
+      "name": "Michigan",
+      "years": {
+        "2000": { "president": [], "senate": [], "house": [] },
+        "2024": { "president": [], "senate": [], "house": [] }
+      }
+    },
+    "26163": {
+      "geoId": "26163",
+      "name": "Wayne",
+      "years": {
+        "2000": {
+          "president": [],
+          "senate": [],
+          "house": [{ "district": 13, "candidates": [] }]
+        },
+        "2024": {
+          "president": [],
+          "senate": [],
+          "house": [{ "district": 13, "candidates": [] }]
+        }
+      }
+    }
+  }
+}

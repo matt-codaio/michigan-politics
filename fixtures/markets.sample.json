@@ -1,0 +1,12 @@
+{
+  "_comment": "Tiny sample. Real snapshots live in local/markets/markets.json. UI must label Not a poll. Probabilities are 0–1, never mixed into poll averages.",
+  "snapshots": [
+    {
+      "timestamp": "2026-09-11T09:51:00-05:00",
+      "el_sayed_prob": 0.64,
+      "rogers_prob": 0.37,
+      "venue": "polymarket",
+      "url": "https://polymarket.com/event/michigan-senate-election-winner"
+    }
+  ]
+}

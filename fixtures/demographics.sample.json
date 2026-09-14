@@ -1,0 +1,124 @@
+{
+  "_comment": "Synthetic zeros for type/shape tests only. Not Census data. Track B writes local/counties/demographics.json.",
+  "generatedAt": "2000-01-01T00:00:00Z",
+  "geos": {
+    "26": {
+      "geoId": "26",
+      "name": "Michigan",
+      "population": [
+        { "year": 2000, "count": 0 },
+        { "year": 2024, "count": 0 }
+      ],
+      "ageShares": {
+        "under18": 0,
+        "age18to24": 0,
+        "age25to34": 0,
+        "age35to44": 0,
+        "age45to54": 0,
+        "age55to64": 0,
+        "age65plus": 0
+      },
+      "raceShares": {
+        "hispanic": 0,
+        "nhWhite": 0,
+        "nhBlack": 0,
+        "nhAsian": 0,
+        "nhAian": 0,
+        "nhNhpi": 0,
+        "nhTwoPlus": 0,
+        "nhOther": 0
+      },
+      "educationShares": {
+        "lessThanHs": 0,
+        "hsGrad": 0,
+        "someCollege": 0,
+        "bachelors": 0,
+        "graduate": 0
+      },
+      "incomeShares": {
+        "lt10k": 0,
+        "from10to15k": 0,
+        "from15to25k": 0,
+        "from25to35k": 0,
+        "from35to50k": 0,
+        "from50to75k": 0,
+        "from75to100k": 0,
+        "from100to150k": 0,
+        "from150to200k": 0,
+        "gte200k": 0
+      },
+      "cvapTotal": 0,
+      "cvapByRace": {
+        "hispanic": 0,
+        "nhWhite": 0,
+        "nhBlack": 0,
+        "nhAsian": 0,
+        "nhAian": 0,
+        "nhNhpi": 0,
+        "nhTwoPlus": 0,
+        "nhOther": 0
+      },
+      "asOf": "2000-01-01",
+      "sourceUrl": "https://example.invalid/fixture"
+    },
+    "26163": {
+      "geoId": "26163",
+      "name": "Wayne",
+      "population": [
+        { "year": 2000, "count": 0 },
+        { "year": 2024, "count": 0 }
+      ],
+      "ageShares": {
+        "under18": 0,
+        "age18to24": 0,
+        "age25to34": 0,
+        "age35to44": 0,
+        "age45to54": 0,
+        "age55to64": 0,
+        "age65plus": 0
+      },
+      "raceShares": {
+        "hispanic": 0,
+        "nhWhite": 0,
+        "nhBlack": 0,
+        "nhAsian": 0,
+        "nhAian": 0,
+        "nhNhpi": 0,
+        "nhTwoPlus": 0,
+        "nhOther": 0
+      },
+      "educationShares": {
+        "lessThanHs": 0,
+        "hsGrad": 0,
+        "someCollege": 0,
+        "bachelors": 0,
+        "graduate": 0
+      },
+      "incomeShares": {
+        "lt10k": 0,
+        "from10to15k": 0,
+        "from15to25k": 0,
+        "from25to35k": 0,
+        "from35to50k": 0,
+        "from50to75k": 0,
+        "from75to100k": 0,
+        "from100to150k": 0,
+        "from150to200k": 0,
+        "gte200k": 0
+      },
+      "cvapTotal": 0,
+      "cvapByRace": {
+        "hispanic": 0,
+        "nhWhite": 0,
+        "nhBlack": 0,
+        "nhAsian": 0,
+        "nhAian": 0,
+        "nhNhpi": 0,
+        "nhTwoPlus": 0,
+        "nhOther": 0
+      },
+      "asOf": "2000-01-01",
+      "sourceUrl": "https://example.invalid/fixture"
+    }
+  }
+}

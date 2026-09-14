@@ -1,0 +1,7 @@
+{
+  "_comment": "Tiny committed sample — not TIGER GeoJSON. Track A writes local/counties/counties.geojson.",
+  "counties": [
+    { "fips": "26081", "name": "Kent" },
+    { "fips": "26163", "name": "Wayne" }
+  ]
+}

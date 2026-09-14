@@ -21,6 +21,7 @@ import {
   type YearOffices,
 } from "../src/types/elections.ts";
 import { MICHIGAN_STATE_GEO_ID } from "../src/types/geography.ts";
+import { candidateMergeKey, displayCandidateName } from "../src/elections/names.ts";
 
 const UA = "michigan-politics-volunteer-dashboard/0.1 (public civic data ingest)";
 const OE_RAW =
@@ -454,7 +455,7 @@ function candidateName(row: Record<string, string>): string {
 }
 
 function normName(name: string): string {
-  return name
+  return displayCandidateName(name)
     .toLowerCase()
     .replace(/\./g, " ")
     .replace(/,/g, " ")
@@ -554,13 +555,16 @@ function addVote(
     byName = new Map();
     byOffice.set(bucket, byName);
   }
-  const key = `${normName(name)}|${party}`;
+  const key = candidateMergeKey(name, party);
   const existing = byName.get(key);
   if (existing) {
     existing.votes += votes;
+    if (displayCandidateName(name).length > existing.name.length) {
+      existing.name = displayCandidateName(name);
+    }
     return;
   }
-  byName.set(key, { name, party, votes, sourceUrl });
+  byName.set(key, { name: displayCandidateName(name), party, votes, sourceUrl });
 }
 
 function hasOffice(store: Store, geoId: string, year: number, office: FederalOffice): boolean {
@@ -818,7 +822,7 @@ function ingestMitPresident(store: Store, text: string): void {
     const votes = parseVotes(row.candidatevotes ?? row.candidate_votes ?? "");
     if (votes == null) continue;
     const party = mitParty(row.party_simplified ?? row.party ?? "");
-    const key = `${fips}|${year}|${normName(candidate)}|${party}`;
+    const key = `${fips}|${year}|${candidateMergeKey(candidate, party)}`;
     let entry = grouped.get(key);
     if (!entry) {
       entry = { name: candidate, party, modes: new Map() };

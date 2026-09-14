@@ -157,7 +157,7 @@ const BLUE = "#2166ac";
 const SEQUENTIAL = ["#edf4fc", "#c6dbef", "#6baed6", "#2171b5", "#08306b"] as const;
 
 export type ColorKind = "margin" | "sequential";
-export type ValueFormat = "margin" | "share" | "count";
+export type ValueFormat = "margin" | "share" | "count" | "years" | "dollars";
 
 export interface LegendSwatch {
   color: string;
@@ -215,6 +215,11 @@ export function formatColorValue(value: number, format: ValueFormat): string {
     if (pts > 0.05) return `D+${abs}`;
     if (pts < -0.05) return `R+${abs}`;
     return "Even";
+  }
+  if (format === "years") return value.toFixed(1);
+  if (format === "dollars") {
+    if (value >= 1000) return `$${Math.round(value / 1000)}k`;
+    return `$${Math.round(value)}`;
   }
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 10_000) return `${Math.round(value / 1000)}k`;

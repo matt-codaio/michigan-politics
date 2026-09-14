@@ -11,12 +11,15 @@
 .AppleDouble
 .LSOverride
 
-# Dependencies and build output (when the app exists)
+# Dependencies and build output
 node_modules/
 dist/
+dist-electron/
+release/
 build/
 .next/
 .vite/
 out/
 *.log
 npm-debug.log*
+*.tsbuildinfo

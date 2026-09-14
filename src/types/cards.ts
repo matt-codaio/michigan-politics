@@ -22,11 +22,11 @@ export const CARD_TITLES: Record<CardId, string> = {
   markets: "Markets",
 };
 
-/** Education, income, and prior elections start collapsed (sketch / plan). */
+/** Education, income, race, age, and prior elections start collapsed. */
 export const CARD_DEFAULT_OPEN: Record<CardId, boolean> = {
   population: true,
-  age: true,
-  race: true,
+  age: false,
+  race: false,
   education: false,
   income: false,
   cvap: true,

@@ -16,6 +16,7 @@ import {
   MAP_STYLE,
 } from "./mapStyle";
 import { useCountiesGeo } from "./useCountiesGeo";
+import { arrangeCardWindows } from "../layout/popoutWindows";
 import { isColorCategoryId, useMapColoring } from "./useMapColoring";
 
 const INTERACTIVE_LAYERS = [COUNTIES_FILL, COUNTIES_LABEL];
@@ -233,6 +234,24 @@ export function CountyMap() {
                 </select>
               </label>
             ) : null}
+            {coloring.showCvapUnitToggle ? (
+              <div className="county-map__unit" role="group" aria-label="CVAP as share or count">
+                <button
+                  type="button"
+                  aria-pressed={coloring.cvapUnit === "share"}
+                  onClick={() => coloring.setCvapUnit("share")}
+                >
+                  Share
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={coloring.cvapUnit === "count"}
+                  onClick={() => coloring.setCvapUnit("count")}
+                >
+                  Count
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className="county-map__hint muted">
@@ -243,6 +262,14 @@ export function CountyMap() {
           {selectedName}
           {geoId !== MICHIGAN_STATE_GEO_ID ? <span className="muted"> · {geoId}</span> : null}
         </p>
+        <button
+          type="button"
+          className="county-map__arrange"
+          title="Tile age, race, education, and income on this display. Prior elections goes fullscreen on another monitor when one is connected."
+          onClick={() => void arrangeCardWindows(geoId)}
+        >
+          Arrange windows
+        </button>
       </div>
       <div className="county-map__canvas-wrap">
         <div ref={containerRef} className="county-map__canvas" />
@@ -271,7 +298,11 @@ export function CountyMap() {
           </>
         ) : coloring.legend.swatches.length > 0 ? (
           <>
-            <span className="muted">{coloring.selected?.label ?? coloring.legend.caption}</span>
+            <span className="muted">
+              {coloring.showCvapUnitToggle
+                ? `${coloring.selected?.label ?? "CVAP"} (${coloring.cvapUnit === "count" ? "people" : "share"})`
+                : (coloring.selected?.label ?? coloring.legend.caption)}
+            </span>
             <ol className="county-map__scale">
               {coloring.legend.swatches.map((swatch) => (
                 <li key={swatch.label}>

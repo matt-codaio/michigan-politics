@@ -1,20 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AGE_BUCKETS,
-  DATA_PATHS,
-  EDUCATION_KEYS,
-  INCOME_BRACKET_KEYS,
-  RACE_KEYS,
-  isCountyFips,
-  type DemographicsFile,
-  type ElectionsFile,
-} from "../types";
-import {
-  AGE_LABELS,
-  EDUCATION_LABELS,
-  INCOME_LABELS,
-  RACE_LABELS,
-} from "../panels/labels";
+import { DATA_PATHS, RACE_KEYS, isCountyFips, type DemographicsFile, type ElectionsFile } from "../types";
+import { RACE_LABELS } from "../panels/labels";
 import {
   DEFAULT_CHOROPLETH_METRIC_ID,
   colorCounties,
@@ -24,6 +10,7 @@ import {
   type ColorLegend,
   type ValueFormat,
 } from "./choropleth";
+import { AGE_BINS, EDUCATION_BINS, INCOME_BINS, histogramPercentile } from "./histogram";
 
 export const COLOR_CATEGORIES = [
   { id: "population", label: "Population" },
@@ -47,10 +34,10 @@ export interface MapColorMetric {
 
 const DEFAULT_METRIC_BY_CATEGORY: Record<ColorCategoryId, string> = {
   population: "population-latest",
-  age: "age-age65plus",
+  age: "age-median",
   race: "race-nhWhite",
-  education: "education-bachelors",
-  income: "income-from100to150k",
+  education: "education-median",
+  income: "income-median",
   cvap: "cvap-total",
   elections: DEFAULT_CHOROPLETH_METRIC_ID,
 };
@@ -95,10 +82,28 @@ function demoMetrics(file: DemographicsFile | null): MapColorMetric[] {
       kind: "sequential",
       format: "count",
     },
-    ...AGE_BUCKETS.map((key) => shareMetric("age", key, AGE_LABELS[key])),
+    {
+      id: "age-median",
+      category: "age",
+      label: "Median age",
+      kind: "sequential",
+      format: "years",
+    },
     ...RACE_KEYS.map((key) => shareMetric("race", key, RACE_LABELS[key])),
-    ...EDUCATION_KEYS.map((key) => shareMetric("education", key, EDUCATION_LABELS[key])),
-    ...INCOME_BRACKET_KEYS.map((key) => shareMetric("income", key, INCOME_LABELS[key])),
+    {
+      id: "education-median",
+      category: "education",
+      label: "Median years of school",
+      kind: "sequential",
+      format: "years",
+    },
+    {
+      id: "income-median",
+      category: "income",
+      label: "Median household income",
+      kind: "sequential",
+      format: "dollars",
+    },
     {
       id: "cvap-total",
       category: "cvap",
@@ -140,6 +145,7 @@ function valuesForMetric(
   metric: MapColorMetric | null,
   demographics: DemographicsFile | null,
   elections: ElectionsFile | null,
+  cvapUnit: "share" | "count",
 ): Record<string, number> | null {
   if (!metric) return null;
 
@@ -168,17 +174,31 @@ function valuesForMetric(
       if (bundle.cvapTotal > 0) out[geoId] = bundle.cvapTotal;
       continue;
     }
+    if (metric.id === "age-median") {
+      const value = histogramPercentile(AGE_BINS, bundle.ageShares);
+      if (value != null) out[geoId] = value;
+      continue;
+    }
+    if (metric.id === "income-median") {
+      const value = histogramPercentile(INCOME_BINS, bundle.incomeShares);
+      if (value != null) out[geoId] = value;
+      continue;
+    }
+    if (metric.id === "education-median") {
+      const value = histogramPercentile(EDUCATION_BINS, bundle.educationShares);
+      if (value != null) out[geoId] = value;
+      continue;
+    }
     const key = metric.id.slice(`${metric.category}-`.length);
-    if (metric.category === "age" && key in bundle.ageShares) {
-      out[geoId] = bundle.ageShares[key as keyof typeof bundle.ageShares];
-    } else if (metric.category === "race" && key in bundle.raceShares) {
+    if (metric.category === "race" && key in bundle.raceShares) {
       out[geoId] = bundle.raceShares[key as keyof typeof bundle.raceShares];
-    } else if (metric.category === "education" && key in bundle.educationShares) {
-      out[geoId] = bundle.educationShares[key as keyof typeof bundle.educationShares];
-    } else if (metric.category === "income" && key in bundle.incomeShares) {
-      out[geoId] = bundle.incomeShares[key as keyof typeof bundle.incomeShares];
-    } else if (metric.category === "cvap" && key in bundle.cvapByRace && bundle.cvapTotal > 0) {
-      out[geoId] = bundle.cvapByRace[key as keyof typeof bundle.cvapByRace] / bundle.cvapTotal;
+    } else if (metric.category === "cvap" && key in bundle.cvapByRace) {
+      const count = bundle.cvapByRace[key as keyof typeof bundle.cvapByRace];
+      if (cvapUnit === "count") {
+        if (count > 0) out[geoId] = count;
+      } else if (bundle.cvapTotal > 0) {
+        out[geoId] = count / bundle.cvapTotal;
+      }
     }
   }
 
@@ -194,6 +214,9 @@ export function useMapColoring(): {
   metrics: MapColorMetric[];
   selected: MapColorMetric | null;
   setMetricId: (id: string) => void;
+  cvapUnit: "share" | "count";
+  setCvapUnit: (unit: "share" | "count") => void;
+  showCvapUnitToggle: boolean;
   values: Record<string, number> | null;
   fills: Record<string, string>;
   legend: ColorLegend;
@@ -204,6 +227,7 @@ export function useMapColoring(): {
   const [loaded, setLoaded] = useState(false);
   const [category, setCategory] = useState<ColorCategoryId>("elections");
   const [metricId, setMetricId] = useState<string | null>(DEFAULT_CHOROPLETH_METRIC_ID);
+  const [cvapUnit, setCvapUnit] = useState<"share" | "count">("share");
 
   useEffect(() => {
     const ac = new AbortController();
@@ -259,13 +283,18 @@ export function useMapColoring(): {
   );
 
   const values = useMemo(
-    () => valuesForMetric(selected, demographics, elections),
-    [selected, demographics, elections],
+    () => valuesForMetric(selected, demographics, elections, cvapUnit),
+    [selected, demographics, elections, cvapUnit],
   );
 
+  const valueFormat: ValueFormat =
+    selected?.category === "cvap" && selected.id !== "cvap-total" && cvapUnit === "count"
+      ? "count"
+      : (selected?.format ?? "share");
+
   const painted = useMemo(
-    () => colorCounties(values, selected?.kind ?? "sequential", selected?.format ?? "share"),
-    [values, selected],
+    () => colorCounties(values, selected?.kind ?? "sequential", valueFormat),
+    [values, selected, valueFormat],
   );
 
   let hint: string | null = null;
@@ -290,6 +319,9 @@ export function useMapColoring(): {
     metrics,
     selected,
     setMetricId,
+    cvapUnit,
+    setCvapUnit,
+    showCvapUnitToggle: selected?.category === "cvap" && selected.id !== "cvap-total",
     values,
     fills: painted.fills,
     legend: painted.legend,

@@ -3,7 +3,7 @@ import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useSelection } from "../selection";
 import { MICHIGAN_STATE_GEO_ID, isCountyFips } from "../types";
-import { applyChoropleth, NO_DATA_FILL } from "./choropleth";
+import { applyFills, NO_DATA_FILL } from "./choropleth";
 import { CountySearch } from "./CountySearch";
 import { collectionBounds, featureBounds } from "./geojson";
 import {
@@ -16,17 +16,18 @@ import {
   MAP_STYLE,
 } from "./mapStyle";
 import { useCountiesGeo } from "./useCountiesGeo";
-import { useElectionMetrics } from "./useElectionMetrics";
+import { arrangeCardWindows } from "../layout/popoutWindows";
+import { isColorCategoryId, useMapColoring } from "./useMapColoring";
 
 const INTERACTIVE_LAYERS = [COUNTIES_FILL, COUNTIES_LABEL];
 
 export function CountyMap() {
   const [geoId, setGeoId] = useSelection();
   const { status, geojson, counties, message } = useCountiesGeo();
-  const elections = useElectionMetrics();
+  const coloring = useMapColoring();
   const painted = useMemo(
-    () => (geojson ? applyChoropleth(geojson, elections.margins) : null),
-    [geojson, elections.margins],
+    () => (geojson ? applyFills(geojson, coloring.fills) : null),
+    [geojson, coloring.fills],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -155,6 +156,16 @@ export function CountyMap() {
 
   useEffect(() => {
     const map = mapRef.current;
+    const el = containerRef.current;
+    if (!map || !mapReady || !el) return;
+    const observer = new ResizeObserver(() => map.resize());
+    observer.observe(el);
+    map.resize();
+    return () => observer.disconnect();
+  }, [mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapReady || !map.getLayer(COUNTIES_HIGHLIGHT)) return;
     const filter =
       geoId === MICHIGAN_STATE_GEO_ID
@@ -188,31 +199,77 @@ export function CountyMap() {
           disabled={status !== "ready"}
           onSelect={setGeoId}
         />
-        {elections.metrics.length > 0 ? (
-          <label className="county-map__metric">
-            <span>Color</span>
-            <select
-              value={elections.selected?.id ?? ""}
-              onChange={(event) => elections.setMetricId(event.target.value)}
-            >
-              {elections.metrics.map((metric) => (
-                <option key={metric.id} value={metric.id}>
-                  {metric.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        {coloring.availableCategories.length > 0 ? (
+          <div className="county-map__coloring">
+            <label className="county-map__metric">
+              <span>Color</span>
+              <select
+                value={coloring.category}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isColorCategoryId(next)) coloring.setCategory(next);
+                }}
+              >
+                {coloring.categories
+                  .filter((item) => coloring.availableCategories.includes(item.id))
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {coloring.metrics.length > 1 ? (
+              <label className="county-map__metric">
+                <span>{coloring.category === "elections" ? "Year" : "By"}</span>
+                <select
+                  value={coloring.selected?.id ?? ""}
+                  onChange={(event) => coloring.setMetricId(event.target.value)}
+                >
+                  {coloring.metrics.map((metric) => (
+                    <option key={metric.id} value={metric.id}>
+                      {metric.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {coloring.showCvapUnitToggle ? (
+              <div className="county-map__unit" role="group" aria-label="CVAP as share or count">
+                <button
+                  type="button"
+                  aria-pressed={coloring.cvapUnit === "share"}
+                  onClick={() => coloring.setCvapUnit("share")}
+                >
+                  Share
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={coloring.cvapUnit === "count"}
+                  onClick={() => coloring.setCvapUnit("count")}
+                >
+                  Count
+                </button>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <p className="county-map__hint muted">
-            {elections.status === "loading"
-              ? "Checking election metrics…"
-              : "Shapes only — election returns not loaded."}
+            {coloring.status === "loading" ? "Checking map colors…" : coloring.hint}
           </p>
         )}
         <p className="county-map__selection">
           {selectedName}
           {geoId !== MICHIGAN_STATE_GEO_ID ? <span className="muted"> · {geoId}</span> : null}
         </p>
+        <button
+          type="button"
+          className="county-map__arrange"
+          title="Tile age, race, education, and income on this display. Prior elections goes fullscreen on another monitor when one is connected."
+          onClick={() => void arrangeCardWindows(geoId)}
+        >
+          Arrange windows
+        </button>
       </div>
       <div className="county-map__canvas-wrap">
         <div ref={containerRef} className="county-map__canvas" />
@@ -222,15 +279,43 @@ export function CountyMap() {
           </div>
         ) : null}
       </div>
-      <div className="county-map__legend" aria-hidden={elections.metrics.length === 0}>
-        {elections.metrics.length > 0 ? (
+      <div className="county-map__legend">
+        {coloring.legend.kind === "margin" && coloring.legend.swatches.length > 0 ? (
           <>
-            <span className="county-map__swatch county-map__swatch--r">R</span>
-            <span className="muted">two-party margin</span>
-            <span className="county-map__swatch county-map__swatch--d">D</span>
+            <span
+              className="county-map__swatch county-map__swatch--r"
+              style={{ background: coloring.legend.swatches[0]?.color }}
+            >
+              R
+            </span>
+            <span className="muted">{coloring.legend.caption}</span>
+            <span
+              className="county-map__swatch county-map__swatch--d"
+              style={{ background: coloring.legend.swatches.at(-1)?.color }}
+            >
+              D
+            </span>
+          </>
+        ) : coloring.legend.swatches.length > 0 ? (
+          <>
+            <span className="muted">
+              {coloring.showCvapUnitToggle
+                ? `${coloring.selected?.label ?? "CVAP"} (${coloring.cvapUnit === "count" ? "people" : "share"})`
+                : (coloring.selected?.label ?? coloring.legend.caption)}
+            </span>
+            <ol className="county-map__scale">
+              {coloring.legend.swatches.map((swatch) => (
+                <li key={swatch.label}>
+                  <span className="county-map__chip" style={{ background: swatch.color }} />
+                  <span>{swatch.label}</span>
+                </li>
+              ))}
+            </ol>
           </>
         ) : (
-          <span className="muted">Click a county to select. Click water or outside Michigan for statewide.</span>
+          <span className="muted">
+            Click a county to select. Click water or outside Michigan for statewide.
+          </span>
         )}
       </div>
     </div>

@@ -9,7 +9,7 @@ npm install
 npm start
 ```
 
-That opens **Michigan Voting Explorer** in its own desktop window (Electron). Data still lives in this repo's `local/` folder. After UI code changes, run `npm run build` once so the window picks them up (or use `npm run app:dev` for live reload).
+That opens **Michigan Voting Explorer** in its own desktop window (Electron). Data still lives in this repo's `local/` folder. `npm start` rebuilds the UI first (`prestart` → `npm run build`), then the Electron shell. For live reload without a production build, use `npm run app:dev`.
 
 ```bash
 npm run install:app
@@ -23,7 +23,7 @@ Browser-only (Vite) is still available as `npm run dev` at [http://localhost:517
 npm run typecheck
 ```
 
-Routes: `/` map explorer, `/polls` (poll desk + markets), `/sources`, `/popout/:cardId`. Geography is in the query string: `?geo=26` (statewide) or a 5-digit county FIPS (`?geo=26163`). Card pop-outs subscribe to the same selection (`BroadcastChannel("mi-explorer")` plus `localStorage` fallback).
+Routes: `/` map explorer, `/polls` (poll desk + markets), `/sources`, `/popout/:cardId`. Geography is in the query string: `?geo=26` (statewide) or a 5-digit county FIPS (`?geo=26163`). Card pop-outs subscribe to the same selection (`BroadcastChannel("mi-explorer")` plus `localStorage` fallback). In the desktop app, **Arrange windows** tiles Age, Race, Education, and Income on the right of the display that holds the map, and opens Prior elections fullscreen on another monitor when one is connected. Population and CVAP stay in the map rail.
 
 ## Local data (`local/`)
 

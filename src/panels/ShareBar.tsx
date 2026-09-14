@@ -34,7 +34,7 @@ export function StackBar<K extends string>({
   );
 }
 
-/** Stacked share bar plus per-bucket bars, with Michigan ticks when a county is selected. */
+/** Per-bucket bars, with Michigan ticks when a county is selected. */
 export function ShareCompareChart<K extends string>({
   geoId,
   name,
@@ -59,11 +59,6 @@ export function ShareCompareChart<K extends string>({
     ...keys.map((key) => Math.max(shares[key] ?? 0, stateShares[key] ?? 0)),
     0.01,
   );
-  let cumulative = 0;
-  const ticks = keys.map((key) => {
-    cumulative += stateShares[key] ?? 0;
-    return { key, at: cumulative };
-  });
 
   return (
     <>
@@ -72,19 +67,6 @@ export function ShareCompareChart<K extends string>({
         {kickerExtra ? ` · ${kickerExtra}` : " shares"}
         {showTicks ? " · tick = Michigan" : ""}
       </p>
-      <div className="stack-bar-wrap">
-        <StackBar keys={keys} shares={shares} colors={colors} labels={labels} />
-        {showTicks
-          ? ticks.slice(0, -1).map((tick) => (
-              <span
-                key={tick.key}
-                className="stack-bar__tick"
-                style={{ left: `${tick.at * 100}%` }}
-                title={`Michigan through ${labels[tick.key]} ${formatShare(tick.at)}`}
-              />
-            ))
-          : null}
-      </div>
       <ul className="tick-bars">
         {keys.map((key) => (
           <li key={key}>

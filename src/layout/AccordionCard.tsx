@@ -1,7 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { useSelection } from "../selection/useSelection";
-import { GEO_QUERY_PARAM } from "../selection/constants";
 import { isCardId, type CardId } from "../types/cards";
+import { openCardPopout } from "./popoutWindows";
 
 interface AccordionCardProps {
   id: CardId | string;
@@ -23,12 +23,7 @@ export function AccordionCard({
   function openPopout(event: MouseEvent<HTMLButtonElement>): void {
     event.stopPropagation();
     if (!isCardId(id)) return;
-    const url = `/popout/${id}?${GEO_QUERY_PARAM}=${encodeURIComponent(geoId)}`;
-    const features =
-      id === "elections"
-        ? "popup=yes,width=960,height=800"
-        : "popup=yes,width=520,height=760";
-    window.open(url, `mi-explorer-${id}`, features);
+    openCardPopout(id, geoId);
   }
 
   return (

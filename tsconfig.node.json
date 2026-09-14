@@ -21,6 +21,7 @@
     "vite.config.ts",
     "vite",
     "electron/main.ts",
+    "electron/preload.ts",
     "scripts/seed-polls.ts",
     "scripts/validate-polls.ts",
     "scripts/test-polls.ts",

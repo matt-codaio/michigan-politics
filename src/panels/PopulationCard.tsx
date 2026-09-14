@@ -10,6 +10,19 @@ import type { GeoCardProps } from "../layout/CardContent";
 import { DemoGate, VintageNote } from "./DemoGate";
 import { formatCount } from "./labels";
 
+function countDomain(points: { count: number }[]): [number, number] | ["auto", "auto"] {
+  const values = points.map((point) => point.count).filter((n) => Number.isFinite(n));
+  if (values.length === 0) return ["auto", "auto"];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min === max) {
+    const pad = Math.max(Math.abs(min) * 0.02, 1);
+    return [min - pad, max + pad];
+  }
+  const pad = (max - min) * 0.08;
+  return [min - pad, max + pad];
+}
+
 export function PopulationCard({ geoId }: GeoCardProps) {
   return (
     <DemoGate geoId={geoId}>
@@ -35,6 +48,8 @@ export function PopulationCard({ geoId }: GeoCardProps) {
                 <LineChart data={bundle.population} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <XAxis dataKey="year" tick={{ fontSize: 11 }} interval={4} />
                   <YAxis
+                    domain={countDomain(bundle.population)}
+                    allowDataOverflow
                     tick={{ fontSize: 11 }}
                     width={48}
                     tickFormatter={(v: number) =>

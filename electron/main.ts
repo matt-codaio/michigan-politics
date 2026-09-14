@@ -3,8 +3,13 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, Menu, shell } from "electron";
+import { app, BrowserWindow, Menu, ipcMain, screen, shell } from "electron";
 import { ensureLocalDirs, handleLocalRequest, setLocalRoot } from "../vite/local-http.ts";
+import type { CardId } from "../src/types/cards.ts";
+import { cardPopoutPath, layoutMainAndTiles } from "../src/layout/windowLayout.ts";
+
+const APP_NAME = "Michigan Voting Explorer";
+app.setName(APP_NAME);
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, "..");
@@ -12,6 +17,103 @@ const DIST_DIR = path.join(REPO_ROOT, "dist");
 const DEV_URL = "http://127.0.0.1:5173";
 const DEFAULT_PORT = 5174;
 const BG = "#f3efe6";
+const popoutWindows = new Map<string, BrowserWindow>();
+
+function popoutPrefs(): Electron.WebPreferences {
+  return {
+    sandbox: true,
+    contextIsolation: true,
+    nodeIntegration: false,
+  };
+}
+
+function parseFeatureNumber(features: string, key: string): number | undefined {
+  const match = features.match(new RegExp(`(?:^|,)\\s*${key}=(-?\\d+)`, "i"));
+  if (!match?.[1]) return undefined;
+  const n = Number(match[1]);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function rememberPopout(cardId: string, win: BrowserWindow): void {
+  const prev = popoutWindows.get(cardId);
+  if (prev && prev !== win && !prev.isDestroyed()) prev.close();
+  popoutWindows.set(cardId, win);
+  win.on("closed", () => {
+    if (popoutWindows.get(cardId) === win) popoutWindows.delete(cardId);
+  });
+}
+
+function openOrMovePopout(
+  origin: string,
+  cardId: string,
+  geoId: string,
+  bounds: { x: number; y: number; width: number; height: number },
+  fullscreen: boolean,
+): void {
+  const url = `${origin}${cardPopoutPath(cardId as CardId, geoId)}`;
+  let win = popoutWindows.get(cardId);
+  if (win && !win.isDestroyed()) {
+    const existing = win;
+    if (existing.isFullScreen()) existing.setFullScreen(false);
+    existing.setBounds(bounds);
+    void existing.loadURL(url);
+    existing.show();
+    if (fullscreen) {
+      setTimeout(() => {
+        if (!existing.isDestroyed()) existing.setFullScreen(true);
+      }, 80);
+    }
+    return;
+  }
+  win = new BrowserWindow({
+    ...bounds,
+    minWidth: 240,
+    minHeight: 200,
+    backgroundColor: BG,
+    show: false,
+    webPreferences: popoutPrefs(),
+  });
+  rememberPopout(cardId, win);
+  attachWindowHandlers(win, origin);
+  win.once("ready-to-show", () => {
+    win.show();
+    if (fullscreen) {
+      setTimeout(() => {
+        if (!win.isDestroyed()) win.setFullScreen(true);
+      }, 80);
+    }
+  });
+  void win.loadURL(url);
+}
+
+function arrangeCardsFromHost(host: BrowserWindow, geoId: string): void {
+  const parsed = new URL(host.webContents.getURL());
+  const origin = parsed.origin;
+  const mainDisplay = screen.getDisplayMatching(host.getBounds());
+  const other = screen.getAllDisplays().find((display) => display.id !== mainDisplay.id);
+  const { main, tiles } = layoutMainAndTiles(mainDisplay.workArea);
+  host.setMinimumSize(480, 400);
+  host.setBounds(main);
+  for (const tile of tiles) {
+    openOrMovePopout(origin, tile.id, geoId, tile.bounds, false);
+  }
+  if (other) {
+    openOrMovePopout(origin, "elections", geoId, other.workArea, true);
+    return;
+  }
+  openOrMovePopout(
+    origin,
+    "elections",
+    geoId,
+    {
+      x: mainDisplay.workArea.x,
+      y: mainDisplay.workArea.y,
+      width: Math.min(1100, Math.max(720, main.width)),
+      height: mainDisplay.workArea.height,
+    },
+    false,
+  );
+}
 
 const STATIC_MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -167,24 +269,32 @@ function openExternal(url: string): void {
 }
 
 function attachWindowHandlers(win: BrowserWindow, appOrigin: string): void {
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(appOrigin)) {
-      return {
-        action: "allow",
-        overrideBrowserWindowOptions: {
-          width: 560,
-          height: 780,
-          backgroundColor: BG,
-          webPreferences: {
-            sandbox: true,
-            contextIsolation: true,
-            nodeIntegration: false,
-          },
-        },
-      };
+  win.webContents.setWindowOpenHandler(({ url, features }) => {
+    if (!url.startsWith(appOrigin)) {
+      openExternal(url);
+      return { action: "deny" };
     }
-    openExternal(url);
-    return { action: "deny" };
+    const width = parseFeatureNumber(features, "width") ?? 560;
+    const height = parseFeatureNumber(features, "height") ?? 780;
+    const x = parseFeatureNumber(features, "left");
+    const y = parseFeatureNumber(features, "top");
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        width,
+        height,
+        ...(x != null ? { x } : {}),
+        ...(y != null ? { y } : {}),
+        backgroundColor: BG,
+        webPreferences: popoutPrefs(),
+      },
+    };
+  });
+
+  win.webContents.on("did-create-window", (child, details) => {
+    const match = details.url.match(/\/popout\/([^/?#]+)/);
+    if (match?.[1]) rememberPopout(match[1], child);
+    attachWindowHandlers(child, appOrigin);
   });
 
   win.webContents.on("will-navigate", (event, url) => {
@@ -198,25 +308,41 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 480,
+    minHeight: 400,
     backgroundColor: BG,
-    title: "Michigan Voting Explorer",
+    title: APP_NAME,
     show: false,
     webPreferences: {
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
+      ...popoutPrefs(),
+      preload: path.join(HERE, "preload.cjs"),
     },
   });
   win.once("ready-to-show", () => win.show());
   return win;
 }
 
+function macAppMenu(): Electron.MenuItemConstructorOptions {
+  return {
+    label: APP_NAME,
+    submenu: [
+      { role: "about" },
+      { type: "separator" },
+      { role: "services" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "unhide" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  };
+}
+
 function installMenu(): void {
   const isMac = process.platform === "darwin";
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{ role: "appMenu" as const }] : []),
+    ...(isMac ? [macAppMenu()] : []),
     { role: "fileMenu" },
     { role: "editMenu" },
     { role: "viewMenu" },
@@ -260,12 +386,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  app.setName("Michigan Voting Explorer");
+  app.setAboutPanelOptions({ applicationName: APP_NAME });
   setLocalRoot(path.join(REPO_ROOT, "local"));
   ensureLocalDirs();
 
   await app.whenReady();
   installMenu();
+
+  ipcMain.handle("arrange-cards", (event, geoId: unknown) => {
+    if (typeof geoId !== "string" || geoId.length === 0) return { ok: false };
+    const host = BrowserWindow.fromWebContents(event.sender);
+    if (!host || host.isDestroyed()) return { ok: false };
+    arrangeCardsFromHost(host, geoId);
+    return { ok: true };
+  });
 
   const win = createWindow();
   const origin = await loadUi(win);

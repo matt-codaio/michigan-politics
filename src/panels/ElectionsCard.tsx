@@ -10,6 +10,7 @@ import {
   type YearOffices,
 } from "../types/elections";
 import { MICHIGAN_STATE_GEO_ID, type GeographyId } from "../types/geography";
+import { mergeCandidates, ticketNominee } from "../elections/names";
 import { StackBar } from "./ShareBar";
 
 interface ElectionsCardProps {
@@ -72,7 +73,7 @@ const SKIP_HEADLINE_NAME =
 
 function headlineRace(offices: YearOffices): ElectionCandidate[] | null {
   const race = offices.president ?? offices.senate;
-  return race?.length ? race : null;
+  return race?.length ? mergeCandidates(race) : null;
 }
 
 function partyShares(candidates: ElectionCandidate[]): Record<(typeof HEADLINE_SHARE_KEYS)[number], number> | null {
@@ -92,22 +93,7 @@ function partyShares(candidates: ElectionCandidate[]): Record<(typeof HEADLINE_S
   };
 }
 
-/** OpenElections often stores "Nominee / running mate" as one string. */
-function ticketNominee(name: string): string {
-  const left = name.split(/\s*(?:w\/|&|\/)\s*/i)[0]?.trim() ?? name;
-  const unglued = left.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/,/g, " ");
-  const cleaned = unglued
-    .replace(/\b(?:jr|sr|ii|iii|iv)\.?$/i, "")
-    .replace(/\b(?:jr|sr|ii|iii|iv)\.?\s+/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  // "Joseph R. Biden Kamala D. Harris" → "Joseph R. Biden"
-  const twoPerson = cleaned.match(
-    /^((?:[A-Za-z]+(?:-[A-Za-z]+)?\s+)+[A-Z]\.?\s+[A-Za-z]+(?:-[A-Za-z]+)?)\s+[A-Z]/,
-  );
-  return twoPerson?.[1]?.trim() ?? cleaned;
-}
-
+/** Display name without running mate. */
 function headlineLastName(name: string): string {
   const nominee = ticketNominee(name);
   const parts = nominee.split(/\s+/).filter(Boolean);
@@ -139,8 +125,9 @@ function sourceHref(candidates: ElectionCandidate[]): string | null {
 }
 
 function CandidateTable({ candidates }: { candidates: ElectionCandidate[] }) {
-  const total = totalVotes(candidates);
-  const href = sourceHref(candidates);
+  const rows = mergeCandidates(candidates);
+  const total = totalVotes(rows);
+  const href = sourceHref(rows);
   return (
     <div className="election-cands">
       <table>
@@ -152,7 +139,7 @@ function CandidateTable({ candidates }: { candidates: ElectionCandidate[] }) {
           </tr>
         </thead>
         <tbody>
-          {candidates.map((row) => (
+          {rows.map((row) => (
             <tr key={`${row.party}-${row.name}`}>
               <td>
                 <span className={`election-swatch ${PARTY_CLASS[row.party]}`} aria-hidden />
